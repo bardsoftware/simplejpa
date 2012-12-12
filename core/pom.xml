@@ -99,7 +99,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
                     <descriptors>
-                        <descriptor>src/main/assembly/papeeria-build.xml</descriptor>
+                        <descriptor>src/main/assembly/deps.xml</descriptor>
                     </descriptors>
                 </configuration>
             </plugin>
