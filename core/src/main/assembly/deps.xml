@@ -10,6 +10,7 @@
         <dependencySet>
             <excludes>
                 <exclude>com.amazonaws:aws-java-sdk</exclude>
+                <exclude>javax.persistence:persistence-api</exclude>
             </excludes>
             <outputDirectory>/</outputDirectory>
             <useProjectArtifact>false</useProjectArtifact>
