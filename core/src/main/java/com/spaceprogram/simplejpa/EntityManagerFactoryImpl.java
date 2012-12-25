@@ -1,32 +1,5 @@
 package com.spaceprogram.simplejpa;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.persistence.Entity;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.PersistenceException;
-import javax.persistence.spi.PersistenceUnitInfo;
-
-import org.apache.commons.collections.MapUtils;
-import org.scannotation.AnnotationDB;
-import org.scannotation.ClasspathUrlFinder;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -45,10 +18,29 @@ import com.spaceprogram.simplejpa.cache.CacheFactory;
 import com.spaceprogram.simplejpa.cache.NoopCache;
 import com.spaceprogram.simplejpa.cache.NoopCacheFactory;
 import com.spaceprogram.simplejpa.stats.OpStats;
+import org.apache.commons.collections.MapUtils;
+import org.scannotation.AnnotationDB;
+import org.scannotation.ClasspathUrlFinder;
+
+import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceException;
+import javax.persistence.spi.PersistenceUnitInfo;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * User: treeder Date: Feb 10, 2008 Time: 6:20:23 PM
- * 
+ * <p/>
  * Additional Contributions - Eric Molitor eric@molitor.org - Eric Wei
  * e.pwei84@gmail.com
  */
@@ -141,18 +133,17 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     private Cache cache;
     private String cacheClassname;
     private boolean consistentRead = true;
-    
+
     // Amazon recommends using no uppercase letters in bucket names, see
     // http://docs.amazonwebservices.com/AmazonS3/latest/dev/BucketRestrictions.html
     // If false, S3 bucket names are always forced to be lowercase.
     // If true, S3 bucket names can contain uppercase letters.
-	private boolean allowUppercaseBucketNames = true;
+    private boolean allowUppercaseBucketNames = true;
 
     /**
      * This one is generally called via the PersistenceProvider.
-     * 
-     * @param persistenceUnitInfo
-     *            only using persistenceUnitName for now
+     *
+     * @param persistenceUnitInfo only using persistenceUnitName for now
      * @param props
      */
     public EntityManagerFactoryImpl(PersistenceUnitInfo persistenceUnitInfo, Map props) {
@@ -161,11 +152,9 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
 
     /**
      * Use this if you want to construct this directly.
-     * 
-     * @param persistenceUnitName
-     *            used to prefix the SimpleDB domains
-     * @param props
-     *            should have accessKey and secretKey
+     *
+     * @param persistenceUnitName used to prefix the SimpleDB domains
+     * @param props               should have accessKey and secretKey
      */
     public EntityManagerFactoryImpl(String persistenceUnitName, Map props) {
         this(persistenceUnitName, props, null, null);
@@ -174,15 +163,29 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     /**
      * Use this one in web applications, see:
      * http://code.google.com/p/simplejpa/wiki/WebApplications
-     * 
+     *
      * @param persistenceUnitName
      * @param props
-     * @param libsToScan
-     *            a set of
+     * @param libsToScan          a set of
      * @param classNames
      */
     public EntityManagerFactoryImpl(String persistenceUnitName, Map props, Set<String> libsToScan,
-            Set<String> classNames) {
+                                    Set<String> classNames) {
+        this(null, persistenceUnitName, props, libsToScan, classNames);
+    }
+
+    /**
+     * Use this one in web applications, see:
+     * http://code.google.com/p/simplejpa/wiki/WebApplications
+     *
+     * @param sdb                 Amazon simple db which will be used for db operations
+     * @param persistenceUnitName
+     * @param props
+     * @param libsToScan          a set of
+     * @param classNames
+     */
+    public EntityManagerFactoryImpl(AmazonSimpleDB sdb, String persistenceUnitName, Map props, Set<String> libsToScan,
+                                    Set<String> classNames) {
         if (persistenceUnitName == null) {
             throw new IllegalArgumentException("Must have a persistenceUnitName!");
         }
@@ -200,11 +203,11 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
 
         init(libsToScan, classNames);
 
-        createClients();
+        createClients(sdb);
     }
 
-    private void createClients() {
-        AWSCredentials awsCredentials = null;
+    private void createClients(AmazonSimpleDB sdb) {
+        AWSCredentials awsCredentials;
         InputStream credentialsFile = getClass().getClassLoader().getResourceAsStream("AwsCredentials.properties");
         if (credentialsFile != null) {
             logger.info("Loading credentials from AwsCredentials.properties");
@@ -227,7 +230,11 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
             awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         }
 
-        this.simpleDbClient = new AmazonSimpleDBClient(awsCredentials, createConfiguration(sdbSecure));
+        if (sdb != null) {
+            this.simpleDbClient = sdb;
+        } else {
+            this.simpleDbClient = new AmazonSimpleDBClient(awsCredentials, createConfiguration(sdbSecure));
+        }
         this.simpleDbClient.setEndpoint(sdbEndpoint);
 
         this.s3Client = new AmazonS3Client(awsCredentials, createConfiguration(s3Secure));
@@ -245,15 +252,15 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     /**
      * * SimpleJPA entity manager, which gets classes names instead of
      * "libs-to-scan".
-     * 
-     * @author Yair Ben-Meir
+     *
      * @param persistenceUnitName
      * @param props
      * @param classNames
      * @throws PersistenceException
+     * @author Yair Ben-Meir
      */
     public static EntityManagerFactoryImpl newInstanceWithClassNames(String persistenceUnitName,
-            Map<String, String> props, String... classNames) throws PersistenceException {
+                                                                     Map<String, String> props, String... classNames) throws PersistenceException {
         return new EntityManagerFactoryImpl(persistenceUnitName, props, null, new TreeSet<String>(
                 Arrays.asList(classNames)));
     }
@@ -301,7 +308,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
 
         s3Endpoint = MapUtils.getString(props, "s3Endpoint", DEFAULT_S3_ENDPOINT);
         s3Secure = MapUtils.getBoolean(props, "s3Secure", false);
-        
+
         allowUppercaseBucketNames = MapUtils.getBoolean(props, "allowUppercaseBucketNames", true);
 
         if (null != libsToScan) {
@@ -396,7 +403,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     /**
      * Call this to load the props from a file in the root of our classpath
      * called: sdb.properties
-     * 
+     *
      * @throws IOException
      * @deprecated don't use this.
      */
@@ -563,7 +570,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      * This will turn on sessionless mode which means that you do not need to
      * keep EntityManager's open, nor do you need to close them. But you should
      * ALWAYS use the second level cache in this case.
-     * 
+     *
      * @param sessionless
      */
     public void setSessionless(boolean sessionless) {
@@ -582,7 +589,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     /**
      * Turns off caches. Useful for testing. This will also shutdown and
      * recreate any existing cache if cacheless is true.
-     * 
+     *
      * @param cacheless
      */
     public void setCacheless(boolean cacheless) {
@@ -607,14 +614,13 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
             bucketName = lobBucketName;
         } else {
             bucketName = getPersistenceUnitName() + "-lobs";
-        	// AWS requires lower case S3 bucket names.
+            // AWS requires lower case S3 bucket names.
         }
-        
-    	if(!allowUppercaseBucketNames)
-    	{
-    		bucketName = bucketName.toLowerCase();
-    	}
-        
+
+        if (!allowUppercaseBucketNames) {
+            bucketName = bucketName.toLowerCase();
+        }
+
         // See if we have checked if the bucket already exists.
         if (!this.bucketSet.contains(bucketName)) {
 
