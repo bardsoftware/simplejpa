@@ -43,6 +43,9 @@ public class BaseTestClass {
         drop(MyInheritanceObject1.class);
         drop(MyInheritanceObject2.class);
         drop(MyInheritanceObject3.class);
+        drop(ManyToManyTestObject1.class);
+        drop(ManyToManyTestObject2.class);
+        drop(PerformanceTestObject.class);
         factory.close();
     }
 
