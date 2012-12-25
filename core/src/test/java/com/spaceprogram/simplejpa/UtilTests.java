@@ -23,7 +23,7 @@ public class UtilTests {
 
     @BeforeClass
     public static void setupEntityManagerFactory() throws IOException {
-        factory = new EntityManagerFactoryImpl("testunit", null);
+        factory = new EntityManagerFactoryImpl("papeeriatestunit", null);
         /*
         This doesn't work when not packaged in jar or something.
         (EntityManagerFactoryImpl) Persistence.createEntityManagerFactory("persistenceSDB");
