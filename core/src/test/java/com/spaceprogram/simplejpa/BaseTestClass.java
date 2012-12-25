@@ -1,20 +1,20 @@
 package com.spaceprogram.simplejpa;
 
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.services.simpledb.AmazonSimpleDB;
+import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
+import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
+import com.amazonaws.services.simpledb.model.Item;
+import com.amazonaws.services.simpledb.model.NoSuchDomainException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.simpledb.AmazonSimpleDB;
-import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
-import com.amazonaws.services.simpledb.model.Item;
-import com.amazonaws.services.simpledb.model.NoSuchDomainException;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * User: treeder
@@ -36,11 +36,34 @@ public class BaseTestClass {
 
     @AfterClass
     public static void tearDownEntityManagerFactory() {
+        drop(MyTestObject.class);
+        drop(MyTestObject2.class);
+        drop(MyTestObject3.class);
+        drop(MyTestObject4.class);
+        drop(MyInheritanceObject1.class);
+        drop(MyInheritanceObject2.class);
+        drop(MyInheritanceObject3.class);
         factory.close();
     }
 
+    /**
+     * Deletes domain associated with entity
+     *
+     * @param classToDelete representing entity
+     */
+    private static void drop(Class classToDelete) {
+        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA) factory.createEntityManager();
+        AmazonSimpleDB db = em.getSimpleDb();
+        String domainName = em.getDomainName(classToDelete);
+
+        System.out.println("deleting domain: " + domainName);
+        DeleteDomainRequest deleteDomainRequest = new DeleteDomainRequest(domainName);
+        db.deleteDomain(deleteDomainRequest);
+        em.close();
+    }
+
     @Before
-    public void cleanupLoggingStuff(){
+    public void cleanupLoggingStuff() {
         afterTestLog.clear();
     }
 
@@ -53,16 +76,9 @@ public class BaseTestClass {
         EntityManagerSimpleJPA em = (EntityManagerSimpleJPA) factory.createEntityManager();
         AmazonSimpleDB db = em.getSimpleDb();
         deleteAll(em, db, MyTestObject.class);
-//        db.deleteDomain(d);
-//        d = db.getDomain(em.getDomainName(MyTestObject2.class));
         deleteAll(em, db, MyTestObject2.class);
-//        db.deleteDomain(d);
-//        d = db.getDomain(em.getDomainName(MyTestObject3.class));
-//        db.deleteDomain(d);
         deleteAll(em, db, MyTestObject3.class);
         deleteAll(em, db, MyTestObject4.class);
-//        d = db.getDomain(em.getDomainName(MyInheritanceObject1.class));
-//        db.deleteDomain(d);
         deleteAll(em, db, MyInheritanceObject1.class);
         deleteAll(em, db, MyInheritanceObject2.class);
         deleteAll(em, db, MyInheritanceObject3.class);
@@ -75,12 +91,8 @@ public class BaseTestClass {
         try {
             List<Item> items = DomainHelper.listAllItems(db, domainName);
             deleteAll(db, domainName, items);
-
-
-        }
-        catch(NoSuchDomainException e) {
-        }        
-        catch (AmazonClientException e) {
+        } catch (NoSuchDomainException e) {
+        } catch (AmazonClientException e) {
             e.printStackTrace();
         }
     }
@@ -90,8 +102,8 @@ public class BaseTestClass {
         for (Item item : itemList) {
 
             db.deleteAttributes(new DeleteAttributesRequest()
-            	.withDomainName(domainName)
-            	.withItemName(item.getName()));
+                    .withDomainName(domainName)
+                    .withItemName(item.getName()));
         }
     }
 
