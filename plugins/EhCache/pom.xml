@@ -7,7 +7,7 @@
     <dependency>
       <groupId>SimpleJPA</groupId>
       <artifactId>SimpleJPA</artifactId>
-      <version>1.6-SNAPSHOT</version>
+      <version>1.6-SNAPSHOT-aldrinleal</version>
       <scope>compile</scope>
     </dependency>
     <dependency>

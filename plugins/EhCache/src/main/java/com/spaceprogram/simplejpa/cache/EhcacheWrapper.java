@@ -161,7 +161,7 @@ public class EhcacheWrapper implements Ehcache, com.spaceprogram.simplejpa.cache
 
     public Object getObj(Object o) {
         Element elem = cache.get(o);
-        return elem == null ? null : elem.getValue();
+        return elem == null ? null : elem.getObjectValue();
     }
 
     public Element getQuiet(Object o) {

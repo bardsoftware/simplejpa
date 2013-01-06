@@ -41,7 +41,7 @@ public class EhCacheFactory implements CacheFactory{
                 configurationResourceName = (String) properties.get(NET_SF_EHCACHE_CONFIGURATION_RESOURCE_NAME);
             }
             if (configurationResourceName == null || configurationResourceName.length() == 0) {
-                manager = new CacheManager();
+                manager = CacheManager.create();
             } else {
                 if (!configurationResourceName.startsWith("/")) {
                     configurationResourceName = "/" + configurationResourceName;
@@ -51,7 +51,7 @@ public class EhCacheFactory implements CacheFactory{
                     }
                 }
                 URL url = loadResource(configurationResourceName);
-                manager = new CacheManager(url);
+                manager = CacheManager.create(url);
             }
         } catch (net.sf.ehcache.CacheException e) {
             if (e.getMessage().startsWith("Cannot parseConfiguration CacheManager. Attempt to create a new instance of " +
