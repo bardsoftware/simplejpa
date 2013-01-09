@@ -596,8 +596,8 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
         this.cacheless = cacheless;
         if (cacheless) {
             cache = new NoopCache();
-            // cacheFactory.shutdown();
-            // cacheFactory = new NoopCacheFactory();
+            cacheFactory.shutdown();
+            cacheFactory = new NoopCacheFactory();
         } else {
             // cacheFactory.shutdown();
             initSecondLevelCache();
