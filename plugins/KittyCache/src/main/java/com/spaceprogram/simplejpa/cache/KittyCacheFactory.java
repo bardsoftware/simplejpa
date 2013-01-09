@@ -27,4 +27,9 @@ public class KittyCacheFactory implements CacheFactory {
     }
 
     public void shutdown() { }
+
+    @Override
+    public void clearAll() {
+        singletonCache.clear();
+    }
 }

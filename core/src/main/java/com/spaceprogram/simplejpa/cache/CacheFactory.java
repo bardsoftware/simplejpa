@@ -21,8 +21,8 @@ public interface CacheFactory {
     Cache createCache(String name);
 
     void shutdown();
-//
-//    void clearAll();
+
+    void clearAll();
 
 //    CacheManager getCacheManager();
 

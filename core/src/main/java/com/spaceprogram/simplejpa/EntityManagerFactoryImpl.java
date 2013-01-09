@@ -130,7 +130,6 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     private boolean cacheless;
     public SimpleJPAConfig config;
     private String lobBucketName;
-    private Cache cache;
     private String cacheClassname;
     private boolean consistentRead = true;
 
@@ -582,8 +581,9 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     }
 
     public void clearSecondLevelCache() {
-        if (cache != null)
-            cache.clear();
+        if (cacheFactory != null) {
+            cacheFactory.clearAll();
+        }
     }
 
     /**
@@ -595,7 +595,6 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     public void setCacheless(boolean cacheless) {
         this.cacheless = cacheless;
         if (cacheless) {
-            cache = new NoopCache();
             cacheFactory.shutdown();
             cacheFactory = new NoopCacheFactory();
         } else {
