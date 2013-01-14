@@ -15,6 +15,7 @@ public class PapeeriaTestObject {
     private String str;
     private String msg;
     private List<PapeeriaTestSubObject1> objects = new ArrayList<PapeeriaTestSubObject1>();
+    private List<PapeeriaTestSubObject2> anotherObjects = new ArrayList<PapeeriaTestSubObject2>();
 
     public PapeeriaTestObject() {
     }
@@ -39,6 +40,15 @@ public class PapeeriaTestObject {
 
     public void setMsg(String msg) {
         this.msg = msg;
+    }
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    public List<PapeeriaTestSubObject2> getAnotherObjects() {
+        return anotherObjects;
+    }
+
+    public void setAnotherObjects(List<PapeeriaTestSubObject2> anotherObjects) {
+        this.anotherObjects = anotherObjects;
     }
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
