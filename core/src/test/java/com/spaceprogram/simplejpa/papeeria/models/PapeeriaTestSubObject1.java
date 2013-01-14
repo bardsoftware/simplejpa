@@ -2,7 +2,6 @@ package com.spaceprogram.simplejpa.papeeria.models;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 
 /**
@@ -11,7 +10,6 @@ import javax.persistence.ManyToOne;
 @Entity
 public class PapeeriaTestSubObject1 {
     private String str;
-    private byte[] data;
 
     @ManyToOne
     private PapeeriaTestObject parent;
@@ -19,9 +17,8 @@ public class PapeeriaTestSubObject1 {
     public PapeeriaTestSubObject1() {
     }
 
-    public PapeeriaTestSubObject1(String id, byte[] data, PapeeriaTestObject parent) {
+    public PapeeriaTestSubObject1(String id, PapeeriaTestObject parent) {
         this.str = id;
-        this.data = data;
         this.parent = parent;
     }
 
@@ -33,16 +30,6 @@ public class PapeeriaTestSubObject1 {
     public void setStr(String str) {
         this.str = str;
     }
-
-    @Lob
-    public byte[] getData() {
-        return data;
-    }
-
-    public void setData(byte[] data) {
-        this.data = data;
-    }
-
 
     public PapeeriaTestObject getParent() {
         return parent;

@@ -7,7 +7,6 @@ import com.spaceprogram.simplejpa.EntityManagerFactoryImpl;
 import com.spaceprogram.simplejpa.EntityManagerSimpleJPA;
 import com.spaceprogram.simplejpa.papeeria.models.PapeeriaTestObject;
 import com.spaceprogram.simplejpa.papeeria.models.PapeeriaTestSubObject1;
-import com.spaceprogram.simplejpa.papeeria.models.PapeeriaTestSubObject2;
 import junit.framework.TestCase;
 
 import javax.persistence.EntityManager;
@@ -24,8 +23,7 @@ public class LazyLoadingTest extends TestCase {
 
     private static final List<Class<?>> CLASSES = ImmutableList.of(
             PapeeriaTestObject.class,
-            PapeeriaTestSubObject1.class,
-            PapeeriaTestSubObject2.class
+            PapeeriaTestSubObject1.class
     );
 
     @Override
@@ -59,14 +57,9 @@ public class LazyLoadingTest extends TestCase {
 
         // create initial structure
         PapeeriaTestObject obj = new PapeeriaTestObject("foo", "42");
-        obj.getObjects().add(new PapeeriaTestSubObject1("o1_1", new byte[]{1, 1, 2, 3, 5, 8}, obj));
-        obj.getObjects().add(new PapeeriaTestSubObject1("o1_2", new byte[]{1, 1, 2, 3, 5, 8, 13, 21}, obj));
-        obj.getObjects().add(new PapeeriaTestSubObject1("o1_3", new byte[]{1, 1, 2, 3, 5, 8, 13, 21, 34, 55}, obj));
-        obj.getAnotherObjects().add(new PapeeriaTestSubObject2("o2_1", obj));
-        obj.getAnotherObjects().add(new PapeeriaTestSubObject2("o2_2", obj));
-        obj.getAnotherObjects().add(new PapeeriaTestSubObject2("o2_3", obj));
-        obj.getAnotherObjects().add(new PapeeriaTestSubObject2("o2_4", obj));
-        obj.getAnotherObjects().add(new PapeeriaTestSubObject2("o2_5", obj));
+        obj.getObjects().add(new PapeeriaTestSubObject1("o1_1", obj));
+        obj.getObjects().add(new PapeeriaTestSubObject1("o1_2", obj));
+        obj.getObjects().add(new PapeeriaTestSubObject1("o1_3", obj));
         em.close();
         em.persist(obj);
 
@@ -74,19 +67,14 @@ public class LazyLoadingTest extends TestCase {
         em = myEntityManagerFactory.createEntityManager();
         PapeeriaTestObject obj2 = em.find(PapeeriaTestObject.class, "foo");
         em.close();
-        assertEquals(3, obj.getObjects().size());
-        assertEquals(5, obj.getAnotherObjects().size());
+        assertEquals(3, obj2.getObjects().size());
 
         // add one more sub objects
         em = myEntityManagerFactory.createEntityManager();
-        PapeeriaTestSubObject1 subObject1Added = new PapeeriaTestSubObject1("o1_4", new byte[]{1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 127}, obj);
+        PapeeriaTestSubObject1 subObject1Added = new PapeeriaTestSubObject1("o1_4", obj);
         obj.getObjects().clear();
         obj.getObjects().add(subObject1Added);
         em.persist(subObject1Added);
-        PapeeriaTestSubObject2 subObject2Added = new PapeeriaTestSubObject2("o2_6", obj);
-        obj.getAnotherObjects().clear();
-        obj.getAnotherObjects().add(subObject2Added);
-        em.persist(subObject2Added);
         em.persist(obj);
         em.close();
 
@@ -95,6 +83,5 @@ public class LazyLoadingTest extends TestCase {
         PapeeriaTestObject obj3 = em.find(PapeeriaTestObject.class, "foo");
         em.close();
         assertEquals(4, obj3.getObjects().size());
-        assertEquals(6, obj3.getAnotherObjects().size());
     }
 }
