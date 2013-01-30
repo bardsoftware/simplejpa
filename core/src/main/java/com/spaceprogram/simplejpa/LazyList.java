@@ -34,7 +34,6 @@ public class LazyList<E> extends AbstractList<E> implements Serializable {
      */
     private List<E> backingList;
     private String nextToken;
-    private int count = -1;
     private String realQuery;
     private String domainName;
     private int maxResults = -1;
@@ -67,10 +66,8 @@ public class LazyList<E> extends AbstractList<E> implements Serializable {
     }
 
     public int size() {
-        if (count > -1) return count;
-
         if (backingList != null && nextToken == null) {
-            count = backingList.size();
+            return backingList.size();
         }
         return origQuery.getCount();
     }

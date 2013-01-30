@@ -75,11 +75,22 @@ public class LazyListTest extends TestCase {
 
         PapeeriaTestSubObject objToDelete = null;
         for (PapeeriaTestSubObject subObject : obj2.getObjects()) {
-            if (subObject.getStr().equals("01_2")) {
+            if (subObject.getStr().equals("o1_2")) {
                 objToDelete = subObject;
             }
         }
-        obj2.getObjects().remove(objToDelete);
-        assertEquals(2, obj2.getObjects().size());
+        List<PapeeriaTestSubObject> objects = obj2.getObjects();
+        objects.remove(objToDelete);
+        int size = objects.size();
+        assertEquals(2, size);
+        em = myEntityManagerFactory.createEntityManager();
+        em.remove(objToDelete);
+        em.persist(obj2);
+        em.close();
+
+        em = myEntityManagerFactory.createEntityManager();
+        PapeeriaTestObject obj3 = em.find(PapeeriaTestObject.class, "foo");
+        em.close();
+        assertEquals(2, obj3.getObjects().size());
     }
 }
