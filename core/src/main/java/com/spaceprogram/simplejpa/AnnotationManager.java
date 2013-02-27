@@ -45,8 +45,9 @@ public class AnnotationManager {
     private Map<String, AnnotationInfo> discriminatorMap = new HashMap<String, AnnotationInfo>();
     private SimpleJPAConfig config;
 
-    public AnnotationManager(SimpleJPAConfig config) {
+    public AnnotationManager(SimpleJPAConfig config, ClassLoader classLoader) {
         this.config = config;
+        Thread.currentThread().setContextClassLoader(classLoader);
     }
 
     public AnnotationInfo getAnnotationInfo(Object o) {
@@ -82,7 +83,7 @@ public class AnnotationManager {
         AnnotationInfo ai = getAnnotationMap().get(className);
         return ai;
     }
-    
+
     // I could have used the getAnnotationInfo() method but I am not sure how it will evolve.
     // I found that the meaning was more visible using another method.
     public AnnotationInfo getAnnotationInfoUsingFullClassName(String fullClassName) {
@@ -99,7 +100,7 @@ public class AnnotationManager {
     public static Class stripEnhancerClass(Class c) {
         String className = c.getName();
         className = stripEnhancerClass(className);
-        if(className.equals(c.getName())){
+        if (className.equals(c.getName())) {
             // no change, did this to fix groovy issue
             return c;
         } else {
@@ -118,7 +119,6 @@ public class AnnotationManager {
 
 
     /**
-     *
      * @param obClass
      * @param classLoader pass in null if you want to use the current threads classloader only
      * @return
@@ -135,7 +135,7 @@ public class AnnotationManager {
 //                    e1.printStackTrace();
 //                    System.out.println("THIRD LEVEL CLASS LODER");
 //                    c = obClass.getClass().getClassLoader().loadClass(obClass);
-                    if(classLoader == null){
+                    if (classLoader == null) {
                         throw e1;
                     } else {
                         c = classLoader.loadClass(obClass);
@@ -157,7 +157,7 @@ public class AnnotationManager {
     public AnnotationInfo putAnnotationInfo(Class c) {
         {
             Entity entity = (Entity) c.getAnnotation(Entity.class);
-            if(entity == null){
+            if (entity == null) {
                 throw new PersistenceException("Class not marked as an @Entity: " + c.getName());
             }
         }
@@ -244,17 +244,15 @@ public class AnnotationManager {
         }
     }
 
-    private void putTableDeclaration(AnnotationInfo ai, Class<?> c)
-	{
-    	Table table = c.getAnnotation(Table.class);
-    	if(table != null)
-    	{
-    		if(table.name() == null)
-    			throw new PersistenceException("You must specify a name= for @Table on " + c.getName());
-    		
-    		ai.setDomainName(table.name());
-    	}
-	}
+    private void putTableDeclaration(AnnotationInfo ai, Class<?> c) {
+        Table table = c.getAnnotation(Table.class);
+        if (table != null) {
+            if (table.name() == null)
+                throw new PersistenceException("You must specify a name= for @Table on " + c.getName());
+
+            ai.setDomainName(table.name());
+        }
+    }
 
 
     private void putEntityListeners(AnnotationInfo ai, Class c) {

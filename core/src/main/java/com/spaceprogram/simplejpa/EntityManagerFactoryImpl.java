@@ -170,7 +170,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      */
     public EntityManagerFactoryImpl(String persistenceUnitName, Map props, Set<String> libsToScan,
                                     Set<String> classNames) {
-        this(null, persistenceUnitName, props, libsToScan, classNames);
+        this(null, persistenceUnitName, props, libsToScan, classNames, Thread.currentThread().getContextClassLoader());
     }
 
     /**
@@ -184,13 +184,13 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      * @param classNames
      */
     public EntityManagerFactoryImpl(AmazonSimpleDB sdb, String persistenceUnitName, Map props, Set<String> libsToScan,
-                                    Set<String> classNames) {
+                                    Set<String> classNames, ClassLoader classLoader) {
         if (persistenceUnitName == null) {
             throw new IllegalArgumentException("Must have a persistenceUnitName!");
         }
         config = new SimpleJPAConfig();
         this.persistenceUnitName = persistenceUnitName;
-        annotationManager = new AnnotationManager(config);
+        annotationManager = new AnnotationManager(config, classLoader);
         this.props = props;
         if (props == null || props.isEmpty()) {
             try {
