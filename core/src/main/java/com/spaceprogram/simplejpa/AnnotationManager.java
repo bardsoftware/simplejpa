@@ -1,35 +1,12 @@
 package com.spaceprogram.simplejpa;
 
+import javax.persistence.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
-
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
-import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.OneToMany;
-import javax.persistence.PersistenceException;
-import javax.persistence.PostLoad;
-import javax.persistence.PostPersist;
-import javax.persistence.PostRemove;
-import javax.persistence.PostUpdate;
-import javax.persistence.PrePersist;
-import javax.persistence.PreRemove;
-import javax.persistence.PreUpdate;
-import javax.persistence.Table;
-import javax.persistence.Transient;
 
 /**
  * User: treeder
@@ -39,15 +16,24 @@ import javax.persistence.Transient;
 public class AnnotationManager {
 
     private static Logger logger = Logger.getLogger(AnnotationManager.class.getName());
+    private static ClassLoader ourClassLoader = Thread.currentThread().getContextClassLoader();
 
     // todo: implement EntityListeners for timestamps
     private Map<String, AnnotationInfo> annotationMap = new HashMap<String, AnnotationInfo>();
     private Map<String, AnnotationInfo> discriminatorMap = new HashMap<String, AnnotationInfo>();
     private SimpleJPAConfig config;
 
-    public AnnotationManager(SimpleJPAConfig config, ClassLoader classLoader) {
+    public AnnotationManager(SimpleJPAConfig config) {
         this.config = config;
-        Thread.currentThread().setContextClassLoader(classLoader);
+    }
+
+    /**
+     * Setup classloader for loading classes using reflection
+     *
+     * @param classLoader which will be used for loading classes
+     */
+    public static void setClassLoader(ClassLoader classLoader) {
+        ourClassLoader = classLoader;
     }
 
     public AnnotationInfo getAnnotationInfo(Object o) {
@@ -104,7 +90,7 @@ public class AnnotationManager {
             // no change, did this to fix groovy issue
             return c;
         } else {
-            c = getClass(className, c.getClassLoader());
+            c = getClass(className);
         }
         return c;
     }
@@ -120,29 +106,11 @@ public class AnnotationManager {
 
     /**
      * @param obClass
-     * @param classLoader pass in null if you want to use the current threads classloader only
      * @return
      */
-    public static Class getClass(String obClass, ClassLoader classLoader) {
+    public static Class getClass(String obClass) {
         try {
-            Class c = null;
-            try {
-                c = Class.forName(obClass, true, Thread.currentThread().getContextClassLoader());
-            } catch (ClassNotFoundException e) {
-                try {
-                    c = Class.forName(obClass);
-                } catch (ClassNotFoundException e1) {
-//                    e1.printStackTrace();
-//                    System.out.println("THIRD LEVEL CLASS LODER");
-//                    c = obClass.getClass().getClassLoader().loadClass(obClass);
-                    if (classLoader == null) {
-                        throw e1;
-                    } else {
-                        c = classLoader.loadClass(obClass);
-                    }
-                }
-            }
-            return c;
+            return Class.forName(obClass, true, ourClassLoader);
         } catch (ClassNotFoundException e) {
             throw new PersistenceException(e);
         }

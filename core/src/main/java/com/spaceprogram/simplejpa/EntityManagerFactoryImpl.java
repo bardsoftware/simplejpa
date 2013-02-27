@@ -15,7 +15,6 @@ import com.amazonaws.services.simpledb.model.ListDomainsRequest;
 import com.amazonaws.services.simpledb.model.ListDomainsResult;
 import com.spaceprogram.simplejpa.cache.Cache;
 import com.spaceprogram.simplejpa.cache.CacheFactory;
-import com.spaceprogram.simplejpa.cache.NoopCache;
 import com.spaceprogram.simplejpa.cache.NoopCacheFactory;
 import com.spaceprogram.simplejpa.stats.OpStats;
 import org.apache.commons.collections.MapUtils;
@@ -170,7 +169,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      */
     public EntityManagerFactoryImpl(String persistenceUnitName, Map props, Set<String> libsToScan,
                                     Set<String> classNames) {
-        this(null, persistenceUnitName, props, libsToScan, classNames, Thread.currentThread().getContextClassLoader());
+        this(null, persistenceUnitName, props, libsToScan, classNames);
     }
 
     /**
@@ -184,13 +183,13 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      * @param classNames
      */
     public EntityManagerFactoryImpl(AmazonSimpleDB sdb, String persistenceUnitName, Map props, Set<String> libsToScan,
-                                    Set<String> classNames, ClassLoader classLoader) {
+                                    Set<String> classNames) {
         if (persistenceUnitName == null) {
             throw new IllegalArgumentException("Must have a persistenceUnitName!");
         }
         config = new SimpleJPAConfig();
         this.persistenceUnitName = persistenceUnitName;
-        annotationManager = new AnnotationManager(config, classLoader);
+        annotationManager = new AnnotationManager(config);
         this.props = props;
         if (props == null || props.isEmpty()) {
             try {
@@ -379,7 +378,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
         // also add simple name to it
         String simpleName = entity.substring(entity.lastIndexOf(".") + 1);
         entityMap.put(simpleName, entity);
-        Class c = getAnnotationManager().getClass(entity, null);
+        Class c = getAnnotationManager().getClass(entity);
         getAnnotationManager().putAnnotationInfo(c);
     }
 
