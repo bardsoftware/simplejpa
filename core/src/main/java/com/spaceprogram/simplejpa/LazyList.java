@@ -12,7 +12,6 @@ import javax.persistence.PersistenceException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.simpledb.model.Item;
 import com.amazonaws.services.simpledb.model.SelectResult;
-import com.spaceprogram.simplejpa.query.JPAQuery;
 import com.spaceprogram.simplejpa.query.QueryImpl;
 
 import com.spaceprogram.simplejpa.query.SimpleQuery;
@@ -77,14 +76,17 @@ public class LazyList<E> extends AbstractList<E> implements Serializable {
     }
 
     public void add(int index, E element) {
+        loadAtleastItems(index - 1);
         backingList.add(index, element);
     }
 
     public E set(int index, E element) {
+        loadAtleastItems(index - 1);
         return backingList.set(index, element);
     }
 
     public E remove(int index) {
+        loadAtleastItems(index);
         return backingList.remove(index);
     }
 
@@ -98,8 +100,9 @@ public class LazyList<E> extends AbstractList<E> implements Serializable {
     }
 
     public E get(int i) {
-        if (logger.isLoggable(Level.FINER))
+        if (logger.isLoggable(Level.FINER)) {
             logger.finer("getting from lazy list at index=" + i);
+        }
         loadAtleastItems(i);
         return backingList.get(i);
     }
