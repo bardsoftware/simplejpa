@@ -62,26 +62,24 @@ public abstract class AbstractQuery implements SimpleQuery {
 
     protected String convertToSimpleDBValue(Object paramOb, Class retType) {
         String param;
-        if (Integer.class.isAssignableFrom(retType)) {
+        if (Integer.class.isAssignableFrom(retType) || int.class.isAssignableFrom(retType)) {
             Integer x = (Integer) paramOb;
-            param = AmazonSimpleDBUtil.encodeRealNumberRange(new BigDecimal(x), AmazonSimpleDBUtil.LONG_DIGITS, EntityManagerSimpleJPA.OFFSET_VALUE)
-                    .toString();
-        } else if (Long.class.isAssignableFrom(retType)) {
+            param = AmazonSimpleDBUtil.encodeRealNumberRange(new BigDecimal(x), AmazonSimpleDBUtil.LONG_DIGITS, EntityManagerSimpleJPA.OFFSET_VALUE);
+        } else if (Long.class.isAssignableFrom(retType) || long.class.isAssignableFrom(retType)) {
             Long x = (Long) paramOb;
-            param = AmazonSimpleDBUtil.encodeRealNumberRange(new BigDecimal(x), AmazonSimpleDBUtil.LONG_DIGITS, EntityManagerSimpleJPA.OFFSET_VALUE)
-                    .toString();
-        } else if (Double.class.isAssignableFrom(retType)) {
+            param = AmazonSimpleDBUtil.encodeRealNumberRange(new BigDecimal(x), AmazonSimpleDBUtil.LONG_DIGITS, EntityManagerSimpleJPA.OFFSET_VALUE);
+        } else if (Double.class.isAssignableFrom(retType) || double.class.isAssignableFrom(retType)) {
             Double x = (Double) paramOb;
             if (!x.isInfinite() && !x.isNaN()) {
                 param = AmazonSimpleDBUtil.encodeRealNumberRange(new BigDecimal(x), AmazonSimpleDBUtil.LONG_DIGITS, AmazonSimpleDBUtil.LONG_DIGITS,
-                        EntityManagerSimpleJPA.OFFSET_VALUE).toString();
+                    EntityManagerSimpleJPA.OFFSET_VALUE);
             } else {
                 param = x.toString();
             }
         } else if (BigDecimal.class.isAssignableFrom(retType)) {
             BigDecimal x = (BigDecimal) paramOb;
             param = AmazonSimpleDBUtil.encodeRealNumberRange(x, AmazonSimpleDBUtil.LONG_DIGITS, AmazonSimpleDBUtil.LONG_DIGITS,
-                    EntityManagerSimpleJPA.OFFSET_VALUE).toString();
+                EntityManagerSimpleJPA.OFFSET_VALUE);
         } else if (Date.class.isAssignableFrom(retType)) {
             Date x = (Date) paramOb;
             param = AmazonSimpleDBUtil.encodeDate(x);
