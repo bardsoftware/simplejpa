@@ -230,11 +230,15 @@ public class Save implements Callable {
             } else if (field.isId()) {
                 continue;
             } else if (Collection.class.isInstance(ob)) {
-                for (Object each : ((Collection) ob)) {
-                    String toSet = each != null ? em.padOrConvertIfRequired(each) : "";
-                    // todo: throw an exception if this is going to exceed
-                    // maximum size, suggest using @Lob
-                    attsToPut.add(new ReplaceableAttribute(columnName, toSet, true));
+                if (((Collection)ob).isEmpty()) {
+                    attsToDelete.add(new Attribute(columnName, null));
+                } else {
+                    for (Object each : ((Collection) ob)) {
+                        String toSet = each != null ? em.padOrConvertIfRequired(each) : "";
+                       // todo: throw an exception if this is going to exceed
+                       // maximum size, suggest using @Lob
+                       attsToPut.add(new ReplaceableAttribute(columnName, toSet, true));
+                    }
                 }
             } else {
                 String toSet = ob != null ? em.padOrConvertIfRequired(ob) : "";
