@@ -717,6 +717,8 @@ public class EntityManagerSimpleJPA implements SimpleEntityManager, DatabaseMana
             else newField = Double.NaN;
             if (retType == double.class)
                 retType = Double.class;
+        } else if (Boolean.class.isAssignableFrom(retType) || retType == boolean.class) {
+          newField = Boolean.valueOf(values.iterator().next());
         } else if (BigDecimal.class.isAssignableFrom(retType)) {
             val = AmazonSimpleDBUtil.decodeRealNumberRange(values.iterator().next(), AmazonSimpleDBUtil.LONG_DIGITS, EntityManagerSimpleJPA.OFFSET_VALUE).toString();
         } else if (byte[].class.isAssignableFrom(retType)) {
