@@ -20,6 +20,7 @@ import com.spaceprogram.simplejpa.stats.OpStats;
 import org.apache.commons.collections.MapUtils;
 import org.scannotation.AnnotationDB;
 import org.scannotation.ClasspathUrlFinder;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
@@ -44,6 +45,7 @@ import java.util.logging.Logger;
  * e.pwei84@gmail.com
  */
 public class EntityManagerFactoryImpl implements EntityManagerFactory {
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger("storage.simplejpa");
     private static Logger logger = Logger.getLogger(EntityManagerFactoryImpl.class.getName());
 
     /**
@@ -126,8 +128,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     private String cacheFactoryClassname;
     private CacheFactory cacheFactory;
     private boolean sessionless;
-    private boolean cacheless;
-    public SimpleJPAConfig config;
+  public SimpleJPAConfig config;
     private String lobBucketName;
     private String cacheClassname;
     private boolean consistentRead = true;
@@ -383,15 +384,17 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     }
 
     private void initSecondLevelCache() {
-        System.out.println("Initing second level cache: " + cacheFactoryClassname);
+        LOGGER.info(String.format("Initing second level cache: %s", cacheFactoryClassname));
         if (cacheFactoryClassname != null) {
-            try {
-                Class<CacheFactory> cacheFactoryClass = (Class<CacheFactory>) Class.forName(cacheFactoryClassname);
-                cacheFactory = cacheFactoryClass.newInstance();
-                cacheFactory.init(props);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+          try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            Class<CacheFactory> cacheFactoryClass = (Class<CacheFactory>) classLoader.loadClass(cacheFactoryClassname);
+            cacheFactory = cacheFactoryClass.newInstance();
+          cacheFactory.init(props);
+          } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+            LOGGER.error("Failed to initialize second level cache", e);
+            throw new RuntimeException();
+          }
         }
         if (cacheFactory == null) {
             cacheFactory = new NoopCacheFactory();
@@ -526,7 +529,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
         return annotationManager;
     }
 
-    public String getDomainName(Class<? extends Object> aClass) {
+    public String getDomainName(Class<?> aClass) {
         String className = getRootClassName(aClass);
         AnnotationInfo ai = getAnnotationManager().getAnnotationInfo(aClass);
         String domainName = ai.getDomainName();
@@ -592,12 +595,10 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      * @param cacheless
      */
     public void setCacheless(boolean cacheless) {
-        this.cacheless = cacheless;
         if (cacheless) {
             cacheFactory.shutdown();
             cacheFactory = new NoopCacheFactory();
         } else {
-            // cacheFactory.shutdown();
             initSecondLevelCache();
         }
     }

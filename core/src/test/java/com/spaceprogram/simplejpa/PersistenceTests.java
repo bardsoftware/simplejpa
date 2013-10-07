@@ -109,8 +109,6 @@ public class PersistenceTests extends BaseTestClass {
 
         Thread.sleep(1000);
 
-        clearCaches();
-
         em = (EntityManagerSimpleJPA) factory.createEntityManager();
         object = em.find(MyTestObject.class, object.getId());
         Assert.assertEquals("Scooby doo", object.getName());
@@ -132,8 +130,6 @@ public class PersistenceTests extends BaseTestClass {
         em.close();
 
         Thread.sleep(1000);
-
-        clearCaches();
 
         em = (EntityManagerSimpleJPA) factory.createEntityManager();
         object = em.find(MyTestObject.class, object.getId());
@@ -419,8 +415,6 @@ public class PersistenceTests extends BaseTestClass {
         System.out.println("age before=" + originalObject.getAge());
         originalObject.setAge(null);
         em.merge(originalObject);
-
-        clearCaches();
 
         Thread.sleep(3000);
 

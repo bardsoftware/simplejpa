@@ -53,13 +53,7 @@ public class TestCacheFactory implements CacheFactory {
         }
 
         @Override
-        public int size() {
-            System.out.println("[TestCache for " + cacheName + "] get size");
-            return map.size();
-        }
-
-        @Override
-        public Object getObj(Object o) {
+        public Object get(Object o) {
             System.out.println("[TestCache for " + cacheName + "] get " + o);
             return map.get(o);
         }
@@ -74,12 +68,6 @@ public class TestCacheFactory implements CacheFactory {
         public boolean remove(Object o) {
             System.out.println("[TestCache for " + cacheName + "] remove " + o);
             return map.remove(o) != null;
-        }
-
-        @Override
-        public void clear() {
-            System.out.println("[TestCache for " + cacheName + "] clear");
-            map.clear();
         }
     }
 }

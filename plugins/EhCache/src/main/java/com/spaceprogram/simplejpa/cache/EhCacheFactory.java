@@ -66,12 +66,7 @@ public class EhCacheFactory implements CacheFactory{
 
     }
 
-
-    public Cache createCache(Map env) {
-        throw new UnsupportedOperationException("Use createCache(String name) instead.");
-    }
-
-    public synchronized EhcacheWrapper createCache(String name) {
+    public synchronized com.spaceprogram.simplejpa.cache.Cache createCache(String name) {
         if (manager == null) {
             throw new CacheException("CacheFactory was not initialized. Call init() before creating a cache.");
         }
@@ -109,14 +104,6 @@ public class EhCacheFactory implements CacheFactory{
 
     public void clearAll() {
         manager.clearAll();
-    }
-
-    public CacheManager getCacheManager() {
-        return manager;
-    }
-
-    public void addDefaultListener(CacheEventListener cacheEventListener) {
-        listeners.add(cacheEventListener);
     }
 
     private URL loadResource(String configurationResourceName) {

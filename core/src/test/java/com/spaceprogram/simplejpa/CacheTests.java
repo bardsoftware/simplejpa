@@ -36,9 +36,6 @@ public class CacheTests extends BaseTestClass{
         // close em
         em.close();
 
-        // clean out the caches
-        clearCaches();
-
         em = factory.createEntityManager();
         // get all MyTestObject2's to get them in 2nd level cache
         Query query = em.createQuery("select o from MyTestObject2 o");
