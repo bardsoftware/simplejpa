@@ -10,16 +10,16 @@ import java.util.Map;
  * @author gkalabin@bardsoftware.com
  */
 public class TestCacheFactory implements CacheFactory {
-    public static Map<String, Cache> cacheMap;
+    public static Map<Class, Cache> cacheMap;
 
     @Override
     public void init(Map properties) {
         System.out.println("[TestCacheFactory] init");
-        cacheMap = new HashMap<String, Cache>();
+        cacheMap = new HashMap<>();
     }
 
     @Override
-    public Cache createCache(String name) {
+    public Cache createCache(Class name) {
         if (cacheMap.containsKey(name)) {
             System.out.println("[TestCacheFactory] get cache " + name);
             return cacheMap.get(name);
@@ -47,9 +47,9 @@ public class TestCacheFactory implements CacheFactory {
         private final Map<Object, Object> map;
         private final String cacheName;
 
-        private TestCache(String name) {
-            map = new HashMap<Object, Object>();
-            cacheName = name;
+        private TestCache(Class aClass) {
+            map = new HashMap<>();
+            cacheName = aClass.getName();
         }
 
         @Override

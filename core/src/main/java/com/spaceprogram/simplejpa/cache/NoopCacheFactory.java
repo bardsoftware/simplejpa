@@ -15,7 +15,7 @@ public class NoopCacheFactory implements CacheFactory {
 
     }
 
-    public Cache createCache(String name) {
+    public Cache createCache(Class name) {
         return noopCache;
     }
 

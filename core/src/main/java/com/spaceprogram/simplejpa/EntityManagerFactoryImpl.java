@@ -564,7 +564,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
 
     public Cache getCache(Class aClass) {
         AnnotationInfo ai = getAnnotationManager().getAnnotationInfo(aClass);
-        return cacheFactory.createCache(ai.getRootClass().getName());
+        return cacheFactory.createCache(ai.getRootClass());
     }
 
     /**

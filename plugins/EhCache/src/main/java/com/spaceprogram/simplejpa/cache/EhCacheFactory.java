@@ -66,10 +66,11 @@ public class EhCacheFactory implements CacheFactory{
 
     }
 
-    public synchronized com.spaceprogram.simplejpa.cache.Cache createCache(String name) {
+    public synchronized com.spaceprogram.simplejpa.cache.Cache createCache(Class itemsClass) {
         if (manager == null) {
             throw new CacheException("CacheFactory was not initialized. Call init() before creating a cache.");
         }
+        String name = itemsClass.getName();
         try {
             Cache cache = manager.getCache(name);
             if (cache == null) {
