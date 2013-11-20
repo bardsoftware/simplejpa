@@ -28,6 +28,7 @@ public class BaseTestClass {
     @BeforeClass
     public static void setupEntityManagerFactory() throws IOException {
         factory = new EntityManagerFactoryImpl("papeeriatestunit", null);
+        factory.setCacheless(true);
         
         /*
         This doesn't work when not packaged in jar or something.
@@ -119,12 +120,5 @@ public class BaseTestClass {
     protected void printAndLog(String s) {
         System.out.println(s);
         afterTestLog.add(s);
-    }
-
-    protected void clearCaches() {
-        factory.getCache(MyTestObject.class).clear();
-        factory.getCache(MyTestObject2.class).clear();
-        factory.getCache(MyTestObject3.class).clear();
-        factory.getCache(MyTestObject4.class).clear();
     }
 }
