@@ -54,6 +54,8 @@ public class LazyList<E> extends AbstractList<E> implements Serializable {
             } else {
                 // Do not include the limit in the query since will specify in loadAtLeastItems()
                 realQuery = query.createAmazonQuery(false).getValue();
+                // load the first portion of the result
+                loadAtleastItems(0);
             }
         } catch (Exception e) {
             throw new PersistenceException(e);
