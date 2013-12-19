@@ -127,7 +127,7 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
     private CacheFactory cacheFactory;
     private boolean sessionless;
     private boolean cacheless;
-    public SimpleJPAConfig config;
+    public SimpleJPAConfig config = new SimpleJPAConfig();
     private String lobBucketName;
     private String cacheClassname;
     private boolean consistentRead = true;
@@ -167,27 +167,15 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
      * @param libsToScan          a set of
      * @param classNames
      */
-    public EntityManagerFactoryImpl(String persistenceUnitName, Map props, Set<String> libsToScan,
-                                    Set<String> classNames) {
-        this(null, persistenceUnitName, props, libsToScan, classNames);
+    public EntityManagerFactoryImpl(String persistenceUnitName, Map props, Set<String> libsToScan, Set<String> classNames) {
+        this(null, null, persistenceUnitName, props, libsToScan, classNames);
     }
 
-    /**
-     * Use this one in web applications, see:
-     * http://code.google.com/p/simplejpa/wiki/WebApplications
-     *
-     * @param sdb                 Amazon simple db which will be used for db operations
-     * @param persistenceUnitName
-     * @param props
-     * @param libsToScan          a set of
-     * @param classNames
-     */
-    public EntityManagerFactoryImpl(AmazonSimpleDB sdb, String persistenceUnitName, Map props, Set<String> libsToScan,
-                                    Set<String> classNames) {
+    public EntityManagerFactoryImpl(AmazonSimpleDB sdb, AmazonS3 s3, String persistenceUnitName, Map props, 
+                                    Set<String> libsToScan, Set<String> classNames) {
         if (persistenceUnitName == null) {
             throw new IllegalArgumentException("Must have a persistenceUnitName!");
         }
-        config = new SimpleJPAConfig();
         this.persistenceUnitName = persistenceUnitName;
         annotationManager = new AnnotationManager(config);
         this.props = props;
@@ -198,45 +186,52 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory {
                 throw new PersistenceException(e);
             }
         }
-
         init(libsToScan, classNames);
-
-        createClients(sdb);
+        createClients(sdb, s3);
     }
 
-    private void createClients(AmazonSimpleDB sdb) {
-        AWSCredentials awsCredentials;
+    private void createClients(AmazonSimpleDB sdb, AmazonS3 s3) {
+        AWSCredentials awsCredentials = null;
+        if (sdb != null) {
+            // use provided sdb client if any
+            this.simpleDbClient = sdb;
+        } else {
+            awsCredentials = loadCredentials();
+            this.simpleDbClient = new AmazonSimpleDBClient(awsCredentials, createConfiguration(sdbSecure));
+            this.simpleDbClient.setEndpoint(sdbEndpoint);
+        }
+  
+        if (s3 != null) {
+            // use provided s3 client if any
+            this.s3Client = s3;
+        } else {
+            // load credentials if not loaded yet
+            awsCredentials = awsCredentials == null ? loadCredentials() : awsCredentials;
+            this.s3Client = new AmazonS3Client(awsCredentials, createConfiguration(s3Secure));
+            this.s3Client.setEndpoint(s3Endpoint);
+        }
+    }
+
+    private AWSCredentials loadCredentials() {
         InputStream credentialsFile = getClass().getClassLoader().getResourceAsStream("AwsCredentials.properties");
         if (credentialsFile != null) {
             logger.info("Loading credentials from AwsCredentials.properties");
             try {
-                awsCredentials = new PropertiesCredentials(credentialsFile);
+                return new PropertiesCredentials(credentialsFile);
             } catch (IOException e) {
                 throw new PersistenceException("Failed loading credentials from AwsCredentials.properties.", e);
             }
-        } else {
-            logger.info("Loading credentials from simplejpa.properties");
-            String awsAccessKey = (String) this.props.get(AWSACCESS_KEY_PROP_NAME);
-            String awsSecretKey = (String) this.props.get(AWSSECRET_KEY_PROP_NAME);
-            if (awsAccessKey == null || awsAccessKey.length() == 0) {
-                throw new PersistenceException("AWS Access Key not found. It is a required property.");
-            }
-            if (awsSecretKey == null || awsSecretKey.length() == 0) {
-                throw new PersistenceException("AWS Secret Key not found. It is a required property.");
-            }
-
-            awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         }
-
-        if (sdb != null) {
-            this.simpleDbClient = sdb;
-        } else {
-            this.simpleDbClient = new AmazonSimpleDBClient(awsCredentials, createConfiguration(sdbSecure));
+        logger.info("Loading credentials from simplejpa.properties");
+        String awsAccessKey = (String) this.props.get(AWSACCESS_KEY_PROP_NAME);
+        String awsSecretKey = (String) this.props.get(AWSSECRET_KEY_PROP_NAME);
+        if (awsAccessKey == null || awsAccessKey.length() == 0) {
+            throw new PersistenceException("AWS Access Key not found. It is a required property.");
         }
-        this.simpleDbClient.setEndpoint(sdbEndpoint);
-
-        this.s3Client = new AmazonS3Client(awsCredentials, createConfiguration(s3Secure));
-        this.s3Client.setEndpoint(s3Endpoint);
+        if (awsSecretKey == null || awsSecretKey.length() == 0) {
+            throw new PersistenceException("AWS Secret Key not found. It is a required property.");
+        }
+        return new BasicAWSCredentials(awsAccessKey, awsSecretKey);
     }
 
     private ClientConfiguration createConfiguration(boolean isSecure) {
