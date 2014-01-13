@@ -26,7 +26,6 @@ public class EhCacheFactory implements CacheFactory{
 
     private CacheManager manager;
     private static final String NET_SF_EHCACHE_CONFIGURATION_RESOURCE_NAME = "net.sf.ehcache.configurationResourceName";
-    private boolean initializing;
     private List<CacheEventListener> listeners = new ArrayList<CacheEventListener>();
 
     public synchronized void init(Map properties) {
@@ -34,7 +33,6 @@ public class EhCacheFactory implements CacheFactory{
             log.warning("Attempt to restart an already started CacheFactory. Using previously created EhCacheFactory.");
             return;
         }
-        initializing = true;
         try {
             String configurationResourceName = null;
             if (properties != null) {
@@ -60,10 +58,7 @@ public class EhCacheFactory implements CacheFactory{
             } else {
                 throw e;
             }
-        } finally {
-            initializing = false;
         }
-
     }
 
 
@@ -78,7 +73,7 @@ public class EhCacheFactory implements CacheFactory{
         try {
             Cache cache = manager.getCache(name);
             if (cache == null) {
-                log.warning("Could not find a specific ehcache configuration for cache named [" + name + "]; using defaults.");
+                log.info("Could not find a specific ehcache configuration for cache named [" + name + "]; using defaults.");
                 manager.addCache(name);
                 cache = manager.getCache(name);
             }
@@ -88,7 +83,6 @@ public class EhCacheFactory implements CacheFactory{
                     for (CacheEventListener listener : listeners) {
                         if (!backingCache.getCacheEventNotificationService().getCacheEventListeners().contains(listener)) {
                             backingCache.getCacheEventNotificationService().registerListener(listener);
-                        } else {
                         }
                     }
                 }
