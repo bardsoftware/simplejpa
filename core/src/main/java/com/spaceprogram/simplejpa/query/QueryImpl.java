@@ -1,13 +1,8 @@
 package com.spaceprogram.simplejpa.query;
 
-import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -15,24 +10,15 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.persistence.FlushModeType;
-import javax.persistence.ManyToOne;
-import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.persistence.TemporalType;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.simpledb.model.Attribute;
-import com.amazonaws.services.simpledb.model.Item;
-import com.amazonaws.services.simpledb.model.NoSuchDomainException;
-import com.amazonaws.services.simpledb.model.SelectResult;
-import com.spaceprogram.simplejpa.*;
-import com.spaceprogram.simplejpa.util.AmazonSimpleDBUtil;
-import com.spaceprogram.simplejpa.util.EscapeUtils;
-
-import org.apache.commons.lang.NotImplementedException;
+import com.spaceprogram.simplejpa.AnnotationInfo;
+import com.spaceprogram.simplejpa.EntityManagerFactoryImpl;
+import com.spaceprogram.simplejpa.EntityManagerSimpleJPA;
+import com.spaceprogram.simplejpa.NamingHelper;
+import com.spaceprogram.simplejpa.PersistentProperty;
 
 /**
  * Need to support the following: <p/> <p/> - Navigation operator (.) DONE - Arithmetic operators: +, - unary *, / multiplication and division +, - addition and subtraction -
@@ -41,15 +27,15 @@ import org.apache.commons.lang.NotImplementedException;
  */
 public class QueryImpl extends AbstractQuery {
 
+    // \b is a word boundary, so \bis\b means that we want to match is whole word only (http://www.regular-expressions.info/wordboundaries.html)
+    private static final Pattern CONDITION_PATTERN = Pattern.compile("(<>)|(>=)|(<=)|=|>|<|\\band\\b|\\bor\\b|\\bis\\b|\\blike\\b|\\bin\\b", Pattern.CASE_INSENSITIVE);
     private static Logger logger = Logger.getLogger(QueryImpl.class.getName());
 
     public static List<String> tokenizeWhere(String where) {
         List<String> split = new ArrayList<String>();
-        Pattern pattern = Pattern.compile(conditionRegex, Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(where);
+        Matcher matcher = CONDITION_PATTERN.matcher(where);
         int lastIndex = 0;
         String s;
-        int i = 0;
         while (matcher.find()) {
             s = where.substring(lastIndex, matcher.start()).trim();
             logger.finest("value: " + s);
@@ -58,7 +44,6 @@ public class QueryImpl extends AbstractQuery {
             split.add(s);
             logger.finest("matcher found: " + s + " at " + matcher.start() + " to " + matcher.end());
             lastIndex = matcher.end();
-            i++;
         }
         s = where.substring(lastIndex).trim();
         logger.finest("final:" + s);
@@ -68,7 +53,6 @@ public class QueryImpl extends AbstractQuery {
 
     private JPAQuery q;
 
-    public static String conditionRegex = "(<>)|(>=)|(<=)|=|>|<|\\band\\b|\\bor\\b|\\bis\\b|\\blike\\b";
     private String qString;
 
     // private AmazonQueryString amazonQuery;
@@ -160,21 +144,24 @@ public class QueryImpl extends AbstractQuery {
         if (comparator.equals("is")) {
             if (param.equalsIgnoreCase("null")) {
                 sb.append(columnName).append(" is null");
-// appendFilter(sb, true, columnName, "starts-with", "");
             } else if (param.equalsIgnoreCase("not null")) {
                 sb.append(columnName).append(" is not null");
-// appendFilter(sb, false, columnName, "starts-with", "");
             } else {
                 throw new PersistenceException("Must use only 'is null' or 'is not null' with where condition containing 'is'");
             }
-        } else if (comparator.equals("like")) {
-            comparator = "like";
-            String paramValue = getParamValueAsStringForAmazonQuery(param, getterForField);
-// System.out.println("param=" + paramValue + "___");
-// paramValue = paramValue.endsWith("%") ? paramValue.substring(0, paramValue.length() - 1) : paramValue;
-// System.out.println("param=" + paramValue + "___");
-// param = param.startsWith("%") ? param.substring(1) : param;
-            appendFilter(sb, columnName, comparator, paramValue);
+        } else if (comparator.equals("in")) {
+          Object valueForIn = getParameterValue(param);
+          // good values for in clause are:
+          if (valueForIn instanceof Collection && !((Collection) valueForIn).isEmpty()) {
+              // non-empty collection of values
+              appendIn(sb, columnName, (Collection<?>) valueForIn);
+          } else if (valueForIn instanceof String && ((String) valueForIn).matches("\\(.+\\)")) {
+              // string with something in parenthesis (for raw values)
+              appendFilter(sb, columnName, comparator, (String) valueForIn);
+          } else {
+              // the other values are bad
+              throw new PersistenceException(String.format("Bad value for in clause: %s", valueForIn));
+          }
         } else {
             /* handle the <> comparator which needs to convert to != for SimpleDB */
             if(comparator.equals("<>")) {
@@ -193,14 +180,7 @@ public class QueryImpl extends AbstractQuery {
         if (not) {
             sb.append("not ");
         }
-        boolean quoteField = !NamingHelper.NAME_FIELD_REF.equals(field);
-        if (quoteField) {
-            sb.append("`");
-        }
-        sb.append(field);
-        if (quoteField) {
-            sb.append("`");
-        }
+        appendField(sb, field);
         sb.append(" ");
         sb.append(comparator);
         sb.append(" ");
@@ -217,34 +197,31 @@ public class QueryImpl extends AbstractQuery {
         appendFilter(sb, false, field, comparator, param, false);
     }
 
-    /*
-     * public StringBuilder toAmazonQuery(){ return toAmazonQuery( }
-     */
-
-    private void appendFilterMultiple(StringBuilder sb, String field, String comparator, List params) {
-        int count = 0;
-        for (Object param : params) {
-            if (count > 0) {
-                sb.append(" and ");
-            }
-            sb.append(field);
-            sb.append(comparator).append(" '").append(param).append("'");
-            count++;
-        }
-    }
-
-    private void appendIn(StringBuilder sb, String field, List<String> params) {
-        sb.append("`").append(field).append("`");
+    private void appendIn(StringBuilder sb, String field, Collection<?> params) {
+        appendField(sb, field);
         sb.append(" ");
         sb.append("IN");
         sb.append(" (");
-        for(int i = 0; i < params.size(); i++){
-            if(i != 0){
+        boolean firstParam = true;
+        for (Object param : params) {
+            if (!firstParam) {
                 sb.append(",");
             }
-            sb.append("'").append(params.get(i)).append("'");
+            sb.append("'").append(param).append("'");
+            firstParam = false;
         }
         sb.append(")");
+    }
+  
+    private void appendField(StringBuilder sb, String field) {
+        boolean quoteField = !NamingHelper.NAME_FIELD_REF.equals(field);
+        if (quoteField) {
+            sb.append("`");
+        }
+        sb.append(field);
+        if (quoteField) {
+            sb.append("`");
+        }
     }
 
     public AmazonQueryString createAmazonQuery(boolean appendLimit) throws NoResultsException, AmazonClientException {
