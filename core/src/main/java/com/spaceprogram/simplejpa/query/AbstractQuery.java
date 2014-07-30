@@ -60,6 +60,24 @@ public abstract class AbstractQuery implements SimpleQuery {
         return "'" + param + "'";
     }
 
+  /**
+   * @param rawParameter raw parameter string from jpa query like :foo or 'foo'
+   * @return value for the parameter
+   * @throws javax.persistence.PersistenceException if there is no parameter value for the string
+   */
+    protected Object getParameterValue(String rawParameter) {
+        String paramName = paramName(rawParameter);
+        if (paramName == null) {
+            // no colon, so just a value
+            return rawParameter;
+        }
+        Object paramOb = parameters.get(paramName);
+        if (paramOb == null) {
+            throw new PersistenceException("parameter is null for: " + paramName);
+        }
+        return paramOb;
+    }
+
     protected String convertToSimpleDBValue(Object paramOb, Class retType) {
         String param;
         if (Integer.class.isAssignableFrom(retType) || int.class.isAssignableFrom(retType)) {
@@ -91,12 +109,11 @@ public abstract class AbstractQuery implements SimpleQuery {
     }
 
     protected String paramName(String param) {
-        int colon = param.indexOf(":");
-        if (colon == -1) {
+        int colonIdx = param.indexOf(":");
+        if (colonIdx == -1) {
             return null;
         }
-        String paramName = param.substring(colon + 1);
-        return paramName;
+      return param.substring(colonIdx + 1);
     }
 
     public SimpleQuery setConsistentRead(boolean consistentRead) {
