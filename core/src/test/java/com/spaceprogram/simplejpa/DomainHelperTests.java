@@ -1,11 +1,5 @@
 package com.spaceprogram.simplejpa;
 
-import java.util.List;
-
-import junit.framework.Assert;
-
-import org.junit.Test;
-
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.model.CreateDomainRequest;
 import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
@@ -13,143 +7,120 @@ import com.amazonaws.services.simpledb.model.Item;
 import com.amazonaws.services.simpledb.model.PutAttributesRequest;
 import com.amazonaws.services.simpledb.model.ReplaceableAttribute;
 import com.amazonaws.services.simpledb.model.SelectResult;
+import junit.framework.Assert;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import javax.persistence.PersistenceException;
+import java.util.List;
 
 /**
  * Must enable 2nd level cache to make this tests useful.
- *
+ * <p/>
  * User: normj
  * Date: Sept 1, 2010
  * Time: 12:56:00 PM
  */
 public class DomainHelperTests extends BaseTestClass {
+    private static final String DOMAIN_NAME = "simplejpa-domainhelper-tests";
+    private AmazonSimpleDB mySdbClient;
 
-	@Test
-	public void findByIdTest() {
-        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA)factory.createEntityManager();
-        
-        AmazonSimpleDB sdbClient = em.getSimpleDb();
-        
-        String domainName = "simplejpa-domainhelper-tests";
-        
-        sdbClient.createDomain(new CreateDomainRequest().withDomainName(domainName));
+    @Before
+    public void setUp() {
+        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA) factory.createEntityManager();
+        mySdbClient = em.getSimpleDb();
+        mySdbClient.createDomain(new CreateDomainRequest().withDomainName(DOMAIN_NAME));
+    }
+
+    @After
+    public void tearDown() {
+        mySdbClient.deleteDomain(new DeleteDomainRequest().withDomainName(DOMAIN_NAME));
+    }
+
+    @Test
+    public void findByIdTest() {
+        Assert.assertNull(DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, "noexist"));
+
+        mySdbClient.putAttributes(new PutAttributesRequest()
+                .withItemName("exist")
+                .withDomainName(DOMAIN_NAME)
+                .withAttributes(new ReplaceableAttribute("name", "value", true)));
+        Assert.assertNotNull(DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, "exist"));
+
         try {
-        	Assert.assertNull(DomainHelper.findItemById(sdbClient, domainName, "noexist"));
-        	
-        	sdbClient.putAttributes(
-        			new PutAttributesRequest()
-        				.withItemName("exist")
-        				.withDomainName(domainName)
-        				.withAttributes(new ReplaceableAttribute("name", "value", true)));
-        	
-        	Assert.assertNotNull(DomainHelper.findItemById(sdbClient, domainName, "exist"));
+            DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, "");
+            Assert.fail("Exception expected");
+        } catch (PersistenceException e) {
+            // OK, got an exception
         }
-        finally {
-        	sdbClient.deleteDomain(new DeleteDomainRequest().withDomainName(domainName));
-        }
-	}
-	
-	@Test
-	public void listAllItemsTests() {
-        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA)factory.createEntityManager();
-        
-        AmazonSimpleDB sdbClient = em.getSimpleDb();
-        
-        String domainName = "simplejpa-domainhelper-tests";
-        
-        sdbClient.createDomain(new CreateDomainRequest().withDomainName(domainName));
-        try {
-        	
-        	for(int i = 0; i < 3; i++) {
-            	sdbClient.putAttributes(
-            			new PutAttributesRequest()
-            				.withItemName("thing" + i)
-            				.withDomainName(domainName)
-            				.withAttributes(new ReplaceableAttribute("name", "value", true)));        		
-        	}
+    }
 
-        	List<Item> items = DomainHelper.listAllItems(sdbClient, domainName);
-        	Assert.assertEquals(3, items.size());
+    @Test
+    public void listAllItemsTests() {
+        for (int i = 0; i < 3; i++) {
+            mySdbClient.putAttributes(
+                    new PutAttributesRequest()
+                            .withItemName("thing" + i)
+                            .withDomainName(DOMAIN_NAME)
+                            .withAttributes(new ReplaceableAttribute("name", "value", true)));
         }
-        finally {
-        	sdbClient.deleteDomain(new DeleteDomainRequest().withDomainName(domainName));
+
+        List<Item> items = DomainHelper.listAllItems(mySdbClient, DOMAIN_NAME);
+        Assert.assertEquals(3, items.size());
+    }
+
+    @Test
+    public void selectItemsTests() {
+        for (int i = 0; i < 10; i++) {
+            mySdbClient.putAttributes(
+                    new PutAttributesRequest()
+                            .withItemName("thing" + i)
+                            .withDomainName(DOMAIN_NAME)
+                            .withAttributes(new ReplaceableAttribute("name", "value", true)));
         }
-	}
-	
-	@Test
-	public void selectItemsTests() {
-        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA)factory.createEntityManager();
-        
-        AmazonSimpleDB sdbClient = em.getSimpleDb();
-        
-        String domainName = "simplejpa-domainhelper-tests";
-        
-        sdbClient.createDomain(new CreateDomainRequest().withDomainName(domainName));
-        try {
-        	for(int i = 0; i < 10; i++) {
-            	sdbClient.putAttributes(
-            			new PutAttributesRequest()
-            				.withItemName("thing" + i)
-            				.withDomainName(domainName)
-            				.withAttributes(new ReplaceableAttribute("name", "value", true)));        		
-        	}
-        	
-        	SelectResult result = DomainHelper.selectItems(sdbClient, String.format("select * from `%s` LIMIT 3", domainName), null);
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, String.format("select * from `%s` LIMIT 3", domainName), result.getNextToken());
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
+        SelectResult result = DomainHelper.selectItems(mySdbClient, String.format("select * from `%s` LIMIT 3", DOMAIN_NAME), null);
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, String.format("select * from `%s` LIMIT 3", domainName), result.getNextToken());
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
+        result = DomainHelper.selectItems(mySdbClient, String.format("select * from `%s` LIMIT 3", DOMAIN_NAME), result.getNextToken());
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, String.format("select * from `%s` LIMIT 3", domainName), result.getNextToken());
-        	Assert.assertEquals(1, result.getItems().size());
-        	Assert.assertNull(result.getNextToken());
+        result = DomainHelper.selectItems(mySdbClient, String.format("select * from `%s` LIMIT 3", DOMAIN_NAME), result.getNextToken());
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
+
+        result = DomainHelper.selectItems(mySdbClient, String.format("select * from `%s` LIMIT 3", DOMAIN_NAME), result.getNextToken());
+        Assert.assertEquals(1, result.getItems().size());
+        Assert.assertNull(result.getNextToken());
+    }
+
+    @Test
+    public void selectItemsWithWhereTests() {
+        for (int i = 0; i < 10; i++) {
+            mySdbClient.putAttributes(
+                    new PutAttributesRequest()
+                            .withItemName("thing" + i)
+                            .withDomainName(DOMAIN_NAME)
+                            .withAttributes(new ReplaceableAttribute("name", "value", true)));
         }
-        finally {
-        	sdbClient.deleteDomain(new DeleteDomainRequest().withDomainName(domainName));
-        }
-	}	
-	
-	@Test
-	public void selectItemsWithWhereTests() {
-        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA)factory.createEntityManager();
-        
-        AmazonSimpleDB sdbClient = em.getSimpleDb();
-        
-        String domainName = "simplejpa-domainhelper-tests";
-        
-        sdbClient.createDomain(new CreateDomainRequest().withDomainName(domainName));
-        try {
-        	for(int i = 0; i < 10; i++) {
-            	sdbClient.putAttributes(
-            			new PutAttributesRequest()
-            				.withItemName("thing" + i)            				
-            				.withDomainName(domainName)
-            				.withAttributes(new ReplaceableAttribute("name", "value", true)));        		
-        	}
-        	
-        	SelectResult result = DomainHelper.selectItems(sdbClient, domainName, "name = 'value' LIMIT 3", null);
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, domainName, "name = 'value' LIMIT 3", result.getNextToken());
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
+        SelectResult result = DomainHelper.selectItems(mySdbClient, DOMAIN_NAME, "name = 'value' LIMIT 3", null);
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, domainName, "name = 'value' LIMIT 3", result.getNextToken());
-        	Assert.assertEquals(3, result.getItems().size());
-        	Assert.assertNotNull(result.getNextToken());
+        result = DomainHelper.selectItems(mySdbClient, DOMAIN_NAME, "name = 'value' LIMIT 3", result.getNextToken());
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
 
-        	result = DomainHelper.selectItems(sdbClient, domainName, "name = 'value' LIMIT 3", result.getNextToken());
-        	Assert.assertEquals(1, result.getItems().size());
-        	Assert.assertNull(result.getNextToken());
-        }
-        finally {
-        	sdbClient.deleteDomain(new DeleteDomainRequest().withDomainName(domainName));
-        }
-	}		
+        result = DomainHelper.selectItems(mySdbClient, DOMAIN_NAME, "name = 'value' LIMIT 3", result.getNextToken());
+        Assert.assertEquals(3, result.getItems().size());
+        Assert.assertNotNull(result.getNextToken());
+
+        result = DomainHelper.selectItems(mySdbClient, DOMAIN_NAME, "name = 'value' LIMIT 3", result.getNextToken());
+        Assert.assertEquals(1, result.getItems().size());
+        Assert.assertNull(result.getNextToken());
+    }
 }
