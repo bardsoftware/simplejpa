@@ -214,10 +214,12 @@ public class EntityManagerSimpleJPA implements SimpleEntityManager, DatabaseMana
      * @return
      */
     public <T> T find(Class<T> tClass, Object id) {
-        if (!sessionless && closed)
-            throw new PersistenceException("EntityManager already closed.");
-        if (id == null)
-            throw new IllegalArgumentException("Id value must not be null.");
+        if (!sessionless && closed) {
+          throw new PersistenceException("EntityManager already closed.");
+        }
+        if (id == null) {
+          throw new IllegalArgumentException("Id value must not be null or empty.");
+        }
         try {
             T ob = cacheGet(tClass, id);
             if (ob != null) {
@@ -237,7 +239,6 @@ public class EntityManagerSimpleJPA implements SimpleEntityManager, DatabaseMana
         if (domainName == null)
             return null;
         Item iraw = DomainHelper.findItemById(factory.getSimpleDb(), domainName, id.toString(), consistentRead);
-// logger.fine("got back item=" + item);
         if (iraw == null)
             return null;
         SdbItem item = new SdbItemImpl2(iraw);

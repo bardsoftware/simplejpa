@@ -11,6 +11,8 @@ import com.amazonaws.services.simpledb.model.Item;
 import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
 
+import javax.persistence.PersistenceException;
+
 /**
  * This is a utility class for doing SimpleDB queries.
  *
@@ -155,7 +157,9 @@ public class DomainHelper {
      * @throws AmazonClientException
      */
     public static Item findItemById(AmazonSimpleDB db, String domainName, String itemName, boolean consistentRead) throws AmazonClientException {
-
+        if (itemName.isEmpty()) {
+          return null;
+        }
         GetAttributesResult results = db.getAttributes(new GetAttributesRequest()
             .withConsistentRead(consistentRead)
             .withDomainName(domainName)
@@ -164,8 +168,6 @@ public class DomainHelper {
         if(results.getAttributes().size() == 0) {
             return null;
         }
-        
-        Item item = new Item(itemName, results.getAttributes());
-        return item;        
+      return new Item(itemName, results.getAttributes());        
     }	
 }
