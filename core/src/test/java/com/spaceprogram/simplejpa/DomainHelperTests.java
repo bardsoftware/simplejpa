@@ -47,13 +47,7 @@ public class DomainHelperTests extends BaseTestClass {
                 .withDomainName(DOMAIN_NAME)
                 .withAttributes(new ReplaceableAttribute("name", "value", true)));
         Assert.assertNotNull(DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, "exist"));
-
-        try {
-            DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, "");
-            Assert.fail("Exception expected");
-        } catch (PersistenceException e) {
-            // OK, got an exception
-        }
+        Assert.assertNull(DomainHelper.findItemById(mySdbClient, DOMAIN_NAME, ""));
     }
 
     @Test

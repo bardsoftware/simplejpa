@@ -217,7 +217,7 @@ public class EntityManagerSimpleJPA implements SimpleEntityManager, DatabaseMana
         if (!sessionless && closed) {
           throw new PersistenceException("EntityManager already closed.");
         }
-        if (id == null || id.equals("")) {
+        if (id == null) {
           throw new IllegalArgumentException("Id value must not be null or empty.");
         }
         try {

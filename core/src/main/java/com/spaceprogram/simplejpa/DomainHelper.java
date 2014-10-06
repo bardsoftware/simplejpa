@@ -158,7 +158,7 @@ public class DomainHelper {
      */
     public static Item findItemById(AmazonSimpleDB db, String domainName, String itemName, boolean consistentRead) throws AmazonClientException {
         if (itemName.isEmpty()) {
-          throw new PersistenceException("Empty item name");
+          return null;
         }
         GetAttributesResult results = db.getAttributes(new GetAttributesRequest()
             .withConsistentRead(consistentRead)
