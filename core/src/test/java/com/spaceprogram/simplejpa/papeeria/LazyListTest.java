@@ -1,60 +1,29 @@
 package com.spaceprogram.simplejpa.papeeria;
 
-import com.amazonaws.services.simpledb.AmazonSimpleDB;
-import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
 import com.spaceprogram.simplejpa.EntityManagerFactoryImpl;
-import com.spaceprogram.simplejpa.EntityManagerSimpleJPA;
 import com.spaceprogram.simplejpa.papeeria.cache.TestCacheFactory;
 import com.spaceprogram.simplejpa.papeeria.models.PapeeriaTestObject;
 import com.spaceprogram.simplejpa.papeeria.models.PapeeriaTestSubObject;
-import junit.framework.TestCase;
 
 import javax.persistence.EntityManager;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * @author gkalabin@bardsoftware.com
  */
-public class LazyListTest extends TestCase {
-
-    public static final String PERSISTENCE_UNIT_NAME = "papeeriatestunit";
-    private EntityManagerFactoryImpl myEntityManagerFactory;
-
-    private static final List<Class<?>> CLASSES = new ArrayList<Class<?>>();
-
+public class LazyListTest extends BasePapeeriaTest {
     static {
-        CLASSES.add(PapeeriaTestObject.class);
-        CLASSES.add(PapeeriaTestSubObject.class);
-    }
-
-
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        myEntityManagerFactory = new EntityManagerFactoryImpl(PERSISTENCE_UNIT_NAME, null, null, getStringClassNames());
-
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-        EntityManagerSimpleJPA em = (EntityManagerSimpleJPA) myEntityManagerFactory.createEntityManager();
-        for (Class<?> aClass : CLASSES) {
-            AmazonSimpleDB db = em.getSimpleDb();
-            String domainName = em.getDomainName(aClass);
-
-            System.out.println("deleting domain: " + domainName);
-            DeleteDomainRequest deleteDomainRequest = new DeleteDomainRequest(domainName);
-            db.deleteDomain(deleteDomainRequest);
-        }
-        em.close();
+        ourTestClasses.add(PapeeriaTestObject.class);
+        ourTestClasses.add(PapeeriaTestSubObject.class);
     }
 
     public void testDelete() {
-        EntityManager em = myEntityManagerFactory.createEntityManager();
+        EntityManager em = getEntityManager();
 
         {
             // create initial structure
@@ -66,7 +35,7 @@ public class LazyListTest extends TestCase {
             em.close();
         }
 
-        em = myEntityManagerFactory.createEntityManager();
+        em = getEntityManager();
         PapeeriaTestObject obj2 = em.find(PapeeriaTestObject.class, "foo");
         em.close();
         assertEquals(3, obj2.getObjects().size());
@@ -81,12 +50,12 @@ public class LazyListTest extends TestCase {
         objects.remove(objToDelete);
         int size = objects.size();
         assertEquals(2, size);
-        em = myEntityManagerFactory.createEntityManager();
+        em = getEntityManager();
         em.remove(objToDelete);
         em.persist(obj2);
         em.close();
 
-        em = myEntityManagerFactory.createEntityManager();
+        em = getEntityManager();
         PapeeriaTestObject obj3 = em.find(PapeeriaTestObject.class, "foo");
         em.close();
         assertEquals(2, obj3.getObjects().size());
@@ -133,7 +102,7 @@ public class LazyListTest extends TestCase {
             System.out.println("[TEST] clear cache");
             TestCacheFactory.cacheMap.clear();
 
-            // try to update founded entity
+            // try to update found entity
             PapeeriaTestSubObject newSubObj = new PapeeriaTestSubObject("new", obj);
             obj.getObjects().add(newSubObj);
             // persist updated entity
@@ -160,13 +129,5 @@ public class LazyListTest extends TestCase {
         System.out.println("[TEST] shutdown");
         entityManagerFactory.close();
         System.out.println("[TEST] shutdown finished");
-    }
-
-    private Set<String> getStringClassNames() {
-        Set<String> classNames = new HashSet<String>(CLASSES.size());
-        for (Class aClass : CLASSES) {
-            classNames.add(aClass.getName());
-        }
-        return classNames;
     }
 }
