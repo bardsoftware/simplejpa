@@ -2,10 +2,14 @@ package com.spaceprogram.simplejpa;
 
 import com.amazonaws.services.simpledb.model.Attribute;
 import com.spaceprogram.simplejpa.query.QueryImpl;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.CallbackFilter;
 import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.NoOp;
 
 import javax.persistence.EnumType;
 import javax.persistence.PersistenceException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -13,7 +17,7 @@ import java.util.logging.Logger;
  * User: treeder
  * Date: May 11, 2008
  * Time: 4:01:28 PM
- * 
+ *
  * Additional Contributions
  *  - Yair Ben-Meir reformy@gmail.com
  */
@@ -73,7 +77,7 @@ public class ObjectBuilder {
                     {
                         orderBy = field.getOrderClauses();
                     }
-                    
+
                     LazyList lazyList = new LazyList(em, typeInList, oneToManyQuery(em, attName, field.getMappedBy(), id, typeInList, orderBy));
 //                    Class retType = field.getReturnType();
                     // todo: assuming List for now, handle other collection types
@@ -122,11 +126,26 @@ public class ObjectBuilder {
         return enumVal;
     }
 
+    private static final CallbackFilter IGNORE_FINALIZE = new CallbackFilter() {
+        public int accept(Method method) {
+            // here return index of the callback we will use for method. See call to Enhancer.setCallbacks for reference
+            if (method.getName().equals("finalize") && method.getParameterTypes().length == 0 && method.getReturnType() == Void.TYPE) {
+                // Use NoOp callback for Object.finalize, so cglib doesn't introduce non-empty finalize method which
+                // just forwards call to the object itself. Empty implementation doesn't make the finalizer thread to
+                // bother with the object, but enhanced implementation (which just forwards call to empty method) does.
+                // Enhanced finalize method may cause heap pollution with lots of objects waiting for finalization and
+                // subsequent out of memory errors
+                return 1;
+            }
+            return 0;
+        }
+    };
     private static ObjectWithInterceptor newEnancedInstance(EntityManagerSimpleJPA em, Class tClass) {
         LazyInterceptor interceptor = new LazyInterceptor(em);
         Enhancer e = new Enhancer();
         e.setSuperclass(tClass);
-        e.setCallback(interceptor);
+        e.setCallbacks(new Callback[]{interceptor, NoOp.INSTANCE});
+        e.setCallbackFilter(IGNORE_FINALIZE);
         Object bean = e.create();
         ObjectWithInterceptor cwi = new ObjectWithInterceptor(bean, interceptor);
         return cwi;
@@ -177,7 +196,7 @@ public class ObjectBuilder {
         Class refType = ai.getPersistentProperty(foreignKeyFieldName).getPropertyClass();
         AnnotationInfo refAi = em.getAnnotationManager().getAnnotationInfo(refType);
         String query = createOneToManyQuery(typeInList, foreignKeyFieldName, refAi, id, orderBy);
-        
+
         logger.finer("OneToMany query=" + query);
         return new QueryImpl(em, query);
     }
