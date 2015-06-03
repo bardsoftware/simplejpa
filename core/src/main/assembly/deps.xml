@@ -9,7 +9,8 @@
     <dependencySets>
         <dependencySet>
             <excludes>
-                <exclude>com.amazonaws:aws-java-sdk</exclude>
+                <exclude>com.amazonaws:aws-java-sdk-s3</exclude>
+                <exclude>com.amazonaws:aws-java-sdk-simpledb</exclude>
                 <exclude>javax.persistence:persistence-api</exclude>
             </excludes>
             <outputDirectory>/</outputDirectory>
